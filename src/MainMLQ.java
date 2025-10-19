@@ -432,54 +432,119 @@ public class MainMLQ {
         }
 
         /** Parseo mínimo de argumentos estilo "--clave valor" y flags booleanos. */
-        static class Args {
-            final String input;
-            final String output;
-            final int scheme;
-            final boolean log;
 
-            Args(String[] argv) {
-                if (argv.length<2) {
-                    throw new IllegalArgumentException("Uso: java MainMLQ <input> <output> [--scheme 1|2|3] [--log]");
-                }
-                this.input= argv[0];
-                this.output= argv[1];
+            static class Args {
+                final String input;
+                final String output;
+                final int scheme;
+                final boolean log;
+                final boolean batch;
 
-                int _scheme= 1;
-                boolean _log= false;
-                for (int i= 2; i<argv.length; i++) {
-                    String a= argv[i];
-                    if ("--scheme".equals(a)) {
-                        if (i + 1 >= argv.length) {
-                            throw new IllegalArgumentException("Falta valor para --scheme");
-                        }
-                        _scheme= Integer.parseInt(argv[++i]);
-                        if (_scheme<1 || _scheme>3) {
-                            throw new IllegalArgumentException("--scheme debe ser 1, 2 o 3");
-                        }
-                    } else if ("--log".equals(a)) {
-                        _log= true;
-                    } else {
-                        throw new IllegalArgumentException("Argumento no reconocido: " + a);
+                Args(String[] argv) {
+                    String _input = null;
+                    String _output = null;
+                    int _scheme = 1;
+                    boolean _log = false;
+                    boolean _batch = false;
+
+                    // Sin args: mostramos uso
+                    if (argv.length == 0) {
+                        throw new IllegalArgumentException("Uso: java MainMLQ <input> <output> [--scheme 1|2|3] [--log] | --batch [--scheme 1|2|3] [--log]");
                     }
+
+                    // Parse simple
+                    for (int i = 0; i < argv.length; i++) {
+                        String a = argv[i];
+                        switch (a) {
+                            case "--scheme":
+                                if (i + 1 >= argv.length) throw new IllegalArgumentException("Falta valor para --scheme");
+                                _scheme = Integer.parseInt(argv[++i]);
+                                if (_scheme < 1 || _scheme > 3) throw new IllegalArgumentException("--scheme debe ser 1, 2 o 3");
+                                break;
+                            case "--log":
+                                _log = true;
+                                break;
+                            case "--batch":
+                                _batch = true;
+                                break;
+                            default:
+                                // Si no es flag, lo tomamos como input y output en orden
+                                if (_input == null) _input = a;
+                                else if (_output == null) _output = a;
+                                else throw new IllegalArgumentException("Argumento no reconocido: " + a);
+                        }
+                    }
+
+                    // Validación por modo
+                    if (_batch) {
+                        // En batch NO se requieren input/output
+                        this.input = null;
+                        this.output = null;
+                    } else {
+                        if (_input == null || _output == null) {
+                            throw new IllegalArgumentException("Uso: java MainMLQ <input> <output> [--scheme 1|2|3] [--log] | --batch [--scheme 1|2|3] [--log]");
+                        }
+                        this.input = _input;
+                        this.output = _output;
+                    }
+                    this.scheme = _scheme;
+                    this.log = _log;
+                    this.batch = _batch;
                 }
-                this.scheme= _scheme;
-                this.log= _log;
             }
+
+            static void ejecutarLote(int scheme, boolean log) throws IOException {
+        File inDir = new File("data/entradas");
+        File outDir = new File("data/salidas");
+        if (!inDir.isDirectory()) {
+            throw new IllegalArgumentException("No existe la carpeta: data/entradas");
         }
+        if (!outDir.exists()) outDir.mkdirs();
+
+        File[] archivos = inDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".txt"));
+        if (archivos == null || archivos.length == 0) {
+            throw new IllegalArgumentException("No hay archivos .txt en data/entradas");
+        }
+
+        // Orden determinístico por nombre
+        Arrays.sort(archivos, Comparator.comparing(File::getName));
+
+        for (File entrada : archivos) {
+            String nombre = entrada.getName(); // ej: mlq001.txt
+            String salida = new File(outDir, "salida_" + nombre).getPath(); // ej: data/salidas/salida_mlq001.txt
+
+            List<Proceso> procs = leerEntrada(entrada.getPath());
+            PlanificadorMLQ plan = new PlanificadorMLQ(procs, scheme);
+            plan.ejecutar();
+            if (log) {
+                System.out.println("----- LOG: " + nombre + " -----");
+                plan.imprimirLog();
+            }
+            plan.escribirSalida(salida);
+            System.out.println("✔ Generado: " + salida);
+        }
+        System.out.println("✅ Simulación completa para todos los archivos en data/entradas/");
+    }
 
         /* ====== Main ======*/
         public static void main(String[] argv) {
             try {
-                Args args= new Args(argv);
-                List<Proceso> procs= leerEntrada(args.input);
-                PlanificadorMLQ plan= new PlanificadorMLQ(procs, args.scheme);
-                plan.ejecutar();
-                plan.escribirSalida(args.output);
-                if (args.log) {
-                    plan.imprimirLog();
+                Args args = new Args(argv);
+
+                if (args.batch) {
+                    // Modo LOTE: procesa todos los .txt en data/entradas
+                    ejecutarLote(args.scheme, args.log);
+                } else {
+                    // Modo MANUAL: un archivo de entrada y uno de salida
+                    List<Proceso> procs = leerEntrada(args.input);
+                    PlanificadorMLQ plan = new PlanificadorMLQ(procs, args.scheme);
+                    plan.ejecutar();
+                    plan.escribirSalida(args.output);
+                    if (args.log) {
+                        plan.imprimirLog();
+                    }
+                    System.out.println("Simulación completa. Resultados escritos en: " + args.output);
                 }
-                System.out.println("Simulación completa. Resultados escritos en: " + args.output);
             } catch (Exception e) {
                 System.err.println("Error: " + e.getMessage());
                 e.printStackTrace(System.err);
