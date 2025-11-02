@@ -23,8 +23,11 @@ bin/
 /nbdist/
 /.nb-gradle/
 
+
 ### VS Code ###
-.vscode/
+# Ignora todo lo demás de VS Code, pero no el archivo launch.json
+.vscode/*
+!.vscode/launch.json
 
 ### Mac OS ###
 .DS_Store
