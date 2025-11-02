@@ -28,20 +28,19 @@ SIMULADORMLQ/
 
 ---
 
-############################## Requisitos #############################
+## Requisitos ##
 
 Antes de ejecutar el proyecto, asegúrate de tener instalado:
 
-- ☕ **Java JDK 17** o superior  
+- **Java JDK 17** o superior  
 - **Visual Studio Code**  
 - **Extension Pack for Java** (contiene el depurador, lenguaje y herramientas necesarias) se lo instala en la store de extensiones 
 
 ---
 
-####################################### Ejecución en Visual Studio Code  ######################################3
+## Ejecución en Visual Studio Code  ##
 
 1. **Clonar el repositorio:**
-   ```bash
    git clone https://github.com/Geos-mora/simuladorRMLQ.git
    cd SIMULADORMLQ
 
@@ -59,5 +58,7 @@ Language Support for Java (by Red Hat)
        Selecciona la configuración Run SIMULADORMLQ
        Presiona F5 o el botón
 
-El simulador usará la configuración de ejecución definida en .vscode/launch.json, por ejemplo: data/entradas/mlq001.txt data/salidas/salida_mlq001.txt --scheme 1 --log
+El simulador usará la configuración de ejecución definida en .vscode/launch.json, por ejemplo:
+
+  data/entradas/mlq001.txt data/salidas/salida_mlq001.txt --scheme 1 --log
 
